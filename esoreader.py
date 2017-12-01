@@ -6,6 +6,12 @@
 # Technology in Architecture, ETH Zuerich. See http://suat.arch.ethz.ch for
 # more information.
 
+# This module was modified by Zixiao (Shawn) Shi to expand its functionality
+# with minor bug fixing, and upgraded to Python 3.0
+# at Department of Civil and Environmental Engineering at Carleton University,
+# Ottawa, Canada. See http://www.carleton.ca/hbilab for more information
+
+
 '''
 esoreader.py
 
@@ -67,7 +73,7 @@ def read_from_path(eso_file_path):
     read in a .eso file and return an EsoFile object that can be used
     to read in pandas DataFrame and Series objects.
     """
-    with open(eso_file_path, 'r') as eso_file:
+    with open(eso_file_path, 'r+') as eso_file:
         eso = EsoFile(eso_file)
     return eso
 
@@ -109,13 +115,20 @@ class EsoFile(object):
         self.dd.build_index()
         self.data = self._read_data()
 
+    """
+    def list_variables(self, key, frequency='TimeStep'):
+        variables = [v for v in self.dd.index.keys()
+                     if v[1].lower() == key.lower() and frequency.lower() in v[0].lower()]
+        return variables
+    """
+
     def find_variable(self, search, key=None, frequency='TimeStep'):
         """returns the coordinates (timestep, key, variable_name) in the
         data dictionary that can be used to find an index. The search is case
         insensitive and need only be specified partially."""
         variables = self.dd.find_variable(search)
         variables = [v for v in variables
-                     if v[0].lower() == frequency.lower()]
+                     if frequency.lower() in v[0].lower()]
         if key:
             variables = [v for v in variables
                          if v[1].lower() == key.lower()]
@@ -165,9 +178,9 @@ class EsoFile(object):
         read_data.
         """
         version, timestamp = [s.strip() for s
-                              in self.eso_file.next().split(',')[-2:]]
+                              in self.eso_file.readline().split(',')[-2:]]
         dd = DataDictionary(version, timestamp)
-        line = self.eso_file.next().strip()
+        line = self.eso_file.readline().strip()
         while line != 'End of Data Dictionary':
             line, reporting_frequency = self._read_reporting_frequency(line)
             if reporting_frequency:
@@ -183,7 +196,7 @@ class EsoFile(object):
             else:
                 # ignore the lines that aren't report variables
                 pass
-            line = self.eso_file.next().strip()
+            line = self.eso_file.readline().strip()
         dd.ids = set(dd.variables.keys())
         return dd
 
